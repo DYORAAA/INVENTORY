@@ -18,29 +18,32 @@
     // 'items', 'inventarisTKJ', dan 'barang_inventory'.
     // Menangani beberapa format decodedText: JSON, "nama|kode", atau plain text.
     function cariBarang(decodedText) {
+        console.log('[cariBarang] decodedText =', decodedText);
         if (!decodedText) return null;
 
         // Jika QR berisi JSON, coba parse dan ambil field kode/nama
         let kodeToFind = null;
         try {
             const parsed = JSON.parse(decodedText);
+            console.log('[cariBarang] parsed QR JSON =', parsed);
             if (parsed && typeof parsed === 'object') {
                 if (parsed.kode) kodeToFind = String(parsed.kode);
                 else if (parsed.code) kodeToFind = String(parsed.code);
+                else if (parsed.id) kodeToFind = String(parsed.id);
+                if (!kodeToFind && (parsed.nama || parsed.name || parsed.title)) {
+                    kodeToFind = String(parsed.nama || parsed.name || parsed.title);
+                }
             }
         } catch (e) {
             // not JSON, ignore
         }
 
-        // Jika format "nama|kode"
         if (!kodeToFind && typeof decodedText === 'string' && decodedText.includes('|')) {
             const parts = decodedText.split('|').map(p => p.trim());
-            // prefer second part as kode if present
             if (parts.length >= 2 && parts[1]) kodeToFind = parts[1];
             else kodeToFind = parts[0];
         }
 
-        // fallback: treat the whole decodedText as kode or name
         if (!kodeToFind) kodeToFind = String(decodedText).trim();
 
         const keysToCheck = ['items', 'inventarisTKJ', 'barang_inventory'];
@@ -50,29 +53,85 @@
             if (!s) continue;
             try {
                 const arr = JSON.parse(s);
-                if (Array.isArray(arr)) allItems.push(...arr);
+                if (Array.isArray(arr)) {
+                    allItems.push(...arr);
+                } else if (arr && typeof arr === 'object') {
+                    allItems.push(...Object.values(arr));
+                }
             } catch (e) {
                 // ignore parse errors
             }
         }
 
+        // jika belum ada data dari keysToCheck, ambil semua localStorage values sebagai fallback
+        if (allItems.length === 0) {
+            console.log('[cariBarang] no items in common keys, scanning all localStorage values as fallback');
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                try {
+                    const v = JSON.parse(localStorage.getItem(k));
+                    if (Array.isArray(v)) allItems.push(...v);
+                    else if (v && typeof v === 'object') allItems.push(...Object.values(v));
+                } catch (e) {
+                    // ignore
+                }
+            }
+        }
+
+        console.log('[cariBarang] allItems count =', allItems.length, allItems.slice(0,5));
+
         // dedupe by id or kode
         const seen = new Set();
         const uniq = [];
         for (const it of allItems) {
-            const id = it && (it.id || it.kode || JSON.stringify(it));
+            if (!it || typeof it !== 'object') continue;
+            const id = it.id || it.kode || it.code || JSON.stringify(it);
             if (!id) continue;
             if (seen.has(id)) continue;
             seen.add(id);
             uniq.push(it);
         }
 
-        const needle = String(kodeToFind).trim().toLowerCase();
-        // search by kode exact, then kode contains, then name contains
-        let found = uniq.find(it => it && it.kode && String(it.kode).trim().toLowerCase() === needle);
-        if (!found) found = uniq.find(it => it && it.kode && String(it.kode).trim().toLowerCase().includes(needle));
-        if (!found) found = uniq.find(it => it && it.nama && String(it.nama).trim().toLowerCase().includes(needle));
+        const needle = String(kodeToFind).trim().toLowerCase().replace(/[^a-z0-9]/gi,'');
 
+        const getCandidates = (obj, keys) => keys.map(k => (obj && obj[k]) ? String(obj[k]).trim().toLowerCase() : null).filter(Boolean);
+
+        let found = null;
+
+        found = uniq.find(it => {
+            const codes = getCandidates(it, ['kode','code','id','kd','serial']);
+            return codes.some(c => c.replace(/[^a-z0-9]/gi,'') === needle);
+        });
+
+        if (!found) {
+            found = uniq.find(it => {
+                const codes = getCandidates(it, ['kode','code','id','kd','serial']);
+                return codes.some(c => c.replace(/[^a-z0-9]/gi,'').includes(needle));
+            });
+        }
+
+        if (!found) {
+            found = uniq.find(it => {
+                const names = getCandidates(it, ['nama','name','title']);
+                return names.some(n => n.replace(/[^a-z0-9]/gi,'').includes(needle));
+            });
+        }
+
+        // fallback agresif: cek semua properti (stringify) apakah mengandung needle
+        if (!found) {
+            for (const it of uniq) {
+                try {
+                    const text = JSON.stringify(it).toLowerCase().replace(/[^a-z0-9]/gi,'');
+
+                    if (text.includes(needle) && needle.length > 0) {
+                        found = it;
+                        break;
+                    }
+                } catch (e) {}
+            }
+        }
+
+        console.log('[cariBarang] found =', found);
         return found || null;
     }
 
@@ -157,9 +216,10 @@
                 const item = cariBarang(decodedText);
                 
                 if (item) {
-                    document.getElementById('hasil_nama').innerText = item.nama || '-';
-                    document.getElementById('hasil_status').innerText = item.status || '-';
-                    document.getElementById('hasil_jumlah').innerText = item.jumlah || '-';
+                    // fallback untuk beberapa nama properti
+                    document.getElementById('hasil_nama').innerText = item.nama || item.name || item.title || '-';
+                    document.getElementById('hasil_status').innerText = item.status || item.keadaan || item.condition || '-';
+                    document.getElementById('hasil_jumlah').innerText = item.jumlah || item.qty || item.stok || item.stock || '-';
                 } else {
                     document.getElementById('hasil_nama').innerText = 'Tidak Ditemukan';
                     document.getElementById('hasil_status').innerText = '-';
