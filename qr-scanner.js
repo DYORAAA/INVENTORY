@@ -112,7 +112,7 @@
 
         if (!found) {
             found = uniq.find(it => {
-                const names = getCandidates(it, ['nama','name','title']);
+                const names = getCandidates(it, ['nama','name','title','nama_barang']);
                 return names.some(n => n.replace(/[^a-z0-9]/gi,'').includes(needle));
             });
         }
@@ -123,7 +123,7 @@
                 try {
                     const text = JSON.stringify(it).toLowerCase().replace(/[^a-z0-9]/gi,'');
 
-                    if (text.includes(needle) && needle.length > 0) {
+                    if (needle.length > 0 && text.includes(needle)) {
                         found = it;
                         break;
                     }
