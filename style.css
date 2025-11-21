@@ -1,0 +1,394 @@
+/* style.css
+   Modern Web3 look: animated gradient background, glowing blobs, glass cards,
+   subtle motion, neat table, accessible contrast.
+*/
+
+/* ---------- Root variables ---------- */
+:root{
+  /* TKJ / tech-oriented web3 palette */
+  --bg-dark: #030417;
+  --neon-cyan: #00d4ff;
+  --neon-magenta: #8a5cff;
+  --neon-green: #36e7b8;
+  --neon-amber: #ffd36b;
+  --glass-bg: rgba(255,255,255,0.04);
+  --glass-border: rgba(255,255,255,0.06);
+  --muted: rgba(235,242,255,0.9);
+  --glass-blur: 14px;
+  --card-radius: 16px;
+  --glass-padding: 18px;
+  --shadow-soft: 0 10px 40px rgba(2,6,18,0.7);
+  --glass-outline: 1px solid rgba(255,255,255,0.04);
+  --mono: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue";
+}
+
+/* ---------- Base ---------- */
+* { box-sizing: border-box; }
+html,body { height:100%; }
+/* GANTI: izinkan scroll vertikal (hapus overflow: hidden yang memblokir scroll) */
+body{
+  margin:0;
+  font-family: var(--mono);
+  color: var(--muted);
+  background: radial-gradient(1200px 600px at 10% 10%, rgba(0,212,255,0.06), transparent 8%),
+              radial-gradient(900px 500px at 90% 80%, rgba(138,92,255,0.06), transparent 8%),
+              linear-gradient(180deg, #020214 0%, #04051a 100%);
+  overflow-x: hidden;
+  overflow-y: auto; /* <-- penting: izinkan scroll vertikal */
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  position:relative;
+}
+
+/* ---------- Animated Gradient & Floating Blobs (pure CSS) ---------- */
+body::before,
+body::after{
+  content:"";
+  position:fixed;
+  z-index:0;
+  inset: -15% -15% -15% -15%;
+  filter: blur(48px) saturate(140%);
+  pointer-events:none;
+  opacity:0.95;
+}
+
+body::before{
+  background: radial-gradient(circle at 12% 18%, rgba(0,212,255,0.28), transparent 16%),
+              radial-gradient(circle at 82% 62%, rgba(138,92,255,0.22), transparent 18%),
+              radial-gradient(circle at 50% 80%, rgba(54,231,184,0.12), transparent 18%);
+  transform: translateY(-10px) scale(1.02);
+  animation: floaty 16s ease-in-out infinite;
+}
+
+body::after{
+  background: conic-gradient(from 180deg at 50% 50%, rgba(0,212,255,0.03), rgba(138,92,255,0.03));
+  mix-blend-mode: overlay;
+  animation: rotatebg 36s linear infinite;
+}
+
+@keyframes floaty{
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-28px) scale(1.06); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes rotatebg{
+  from { transform: rotate(0deg) }
+  to { transform: rotate(360deg) }
+}
+
+/* ---------- Center container ---------- */
+.container {
+  width:92%;
+  max-width:1100px;
+  margin:36px auto;
+  position:relative;
+  z-index:2; /* above background */
+  padding:28px;
+}
+
+/* subtle tech grid overlay */
+.container::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 120px 120px, 120px 120px;
+  opacity:0.06;
+  pointer-events:none;
+  border-radius:calc(var(--card-radius) + 4px);
+}
+
+/* ---------- Header ---------- */
+h1,h2 { margin:6px 0 18px; text-align:center; letter-spacing:0.4px; color: #f8fbff; }
+h1 { font-size:30px; font-weight:800; text-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+.subtitle { color: rgba(235,242,255,0.75); font-weight:500; margin-bottom:18px; }
+
+/* ---------- Glass Card ---------- */
+.form-container,
+.stats,
+.table-wrap,
+.login-container,
+.form-container,
+.form-container input,
+.form-container select {
+  position:relative;
+}
+
+.form-container{
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius: var(--card-radius);
+  padding: var(--glass-padding);
+  box-shadow: var(--shadow-soft);
+  border: var(--glass-outline);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.1);
+  transition: transform .28s cubic-bezier(.2,.9,.3,1), box-shadow .28s;
+  position:relative;
+  overflow:hidden;
+}
+.form-container:after{
+  content:"";
+  position:absolute; right:-40%; top:-40%; width:120%; height:120%;
+  background: radial-gradient(circle at 10% 10%, rgba(0,212,255,0.06), transparent 12%),
+              radial-gradient(circle at 90% 90%, rgba(138,92,255,0.05), transparent 12%);
+  transform: rotate(20deg);
+  pointer-events:none;
+}
+.form-container:hover{ transform: translateY(-8px) scale(1.01); }
+
+/* ---------- Form elements ---------- */
+input, select, textarea {
+  width:100%;
+  padding:12px 14px;
+  margin-top:10px;
+  background: rgba(255,255,255,0.03);
+  border-radius:8px;
+  border: 1px solid rgba(255,255,255,0.04);
+  color: var(--muted);
+  outline:none;
+  transition: box-shadow .15s, transform .12s;
+  font-size:14px;
+}
+input:focus, select:focus, textarea:focus {
+  box-shadow: 0 4px 18px rgba(124,92,255,0.12);
+  transform: translateY(-2px);
+  border-color: rgba(124,92,255,0.28);
+  color: #434343;
+}
+
+/* ---------- Buttons ---------- */
+button {
+  appearance:none;
+  display:inline-block;
+  border:none;
+  padding:10px 14px;
+  border-radius:10px;
+  font-weight:700;
+  cursor:pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+  box-shadow: 0 6px 20px rgba(2,6,16,0.6);
+}
+button:active{ transform: translateY(1px) scale(.997); }
+
+/* primary */
+button:not(.excel-btn):not(.logout):not(.aksi-btn) {
+  background: linear-gradient(90deg, rgba(0,212,255,0.95), rgba(138,92,255,0.92));
+  color: #04101a;
+  box-shadow: 0 10px 30px rgba(0,212,255,0.12), 0 2px 8px rgba(2,6,16,0.6);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+button:not(.excel-btn):not(.logout):not(.aksi-btn):hover{ box-shadow: 0 18px 40px rgba(0,212,255,0.14); transform: translateY(-3px); }
+
+/* green excel */
+.excel-btn {
+  background: linear-gradient(90deg, var(--neon-green), #28a745);
+  color:#04110a;
+  font-weight:800;
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: 0 8px 26px rgba(38,166,91,0.08);
+}
+
+/* logout */
+.logout {
+  background: linear-gradient(90deg, #ff6b6b, #ff3d3d);
+  color: white;
+  float:right;
+  padding:8px 12px;
+  border-radius:10px;
+  box-shadow: 0 8px 26px rgba(255,80,80,0.08);
+}
+
+/* small action buttons */
+.aksi-btn { 
+  background: rgba(255,255,255,0.03);
+  color: #fff;
+  padding:8px 10px;
+  border-radius:10px;
+  font-weight:800;
+  margin:4px 4px;
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: box-shadow .12s, transform .12s;
+}
+.aksi-btn.edit { background: linear-gradient(90deg,#ffb86b,#ff7b4d); color:#06101a; box-shadow: 0 8px 20px rgba(255,130,70,0.08); }
+.aksi-btn.hapus { background: linear-gradient(90deg,#ff6b6b,#ff3d3d); color:#fff; box-shadow: 0 8px 20px rgba(255,70,70,0.08); }
+.aksi-btn.notif { background: linear-gradient(90deg,var(--neon-magenta),var(--neon-green)); color:#06101a; box-shadow: 0 8px 20px rgba(124,92,255,0.06); }
+
+/* ---------- Stats boxes ---------- */
+.stats {
+  display:flex;
+  gap:12px;
+  margin:18px 0;
+  z-index:2;
+}
+.box {
+  flex:1;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.008));
+  border-radius:12px;
+  padding:14px;
+  text-align:center;
+  box-shadow: 0 10px 36px rgba(2,6,16,0.5);
+  border: 1px solid rgba(255,255,255,0.02);
+}
+.box span { display:block; font-size:22px; margin-top:8px; font-weight:800; color:#fff; }
+
+/* ---------- Table styling ---------- */
+.table-wrap { overflow:auto; border-radius:12px; padding:6px; }
+table {
+  width:100%;
+  border-collapse:collapse;
+  background:transparent;
+  color: #f8fafd;
+}
+thead th {
+  text-align:center;
+  padding:12px 10px;
+  font-weight:700;
+  font-size:13px;
+  color: #eaf6ff;
+  background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.008));
+  border-bottom:1px solid rgba(255,255,255,0.02);
+  position:relative;
+}
+thead th:after{ content:""; position:absolute; left:20%; right:20%; bottom:4px; height:3px; border-radius:6px; background: linear-gradient(90deg,var(--neon-cyan),var(--neon-magenta)); opacity:0.6 }
+tbody td {
+  padding:12px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.02);
+  text-align:center;
+  vertical-align:middle;
+  font-size:14px;
+}
+tbody tr:hover {
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  transform: translateY(-2px);
+  transition: all .18s ease;
+}
+table img { width:64px; height:64px; object-fit:cover; border-radius:8px; border: 1px solid rgba(255,255,255,0.03); }
+
+/* ---------- Login ---------- */
+.login-container {
+  width:360px;
+  margin:70px auto;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  padding:20px;
+  border-radius:14px;
+  box-shadow: var(--shadow-soft);
+  border: var(--glass-outline);
+  text-align:center;
+  position:relative;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width:900px) {
+  .stats { flex-direction:column; }
+  .container { padding:16px; }
+  table img { width:48px; height:48px; }
+  .login-container { width:92%; }
+}
+
+/* ---------- Tiny subtle floating icons (decor) ---------- */
+.decor-dot {
+  position: absolute;
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.9), rgba(124,92,255,0.9));
+  mix-blend-mode: overlay;
+  filter: blur(6px);
+  opacity:0.12;
+  z-index:1;
+  pointer-events:none;
+}
+
+/* ---------- Accessibility focus ---------- */
+input:focus, select:focus, button:focus { outline: 3px solid rgba(124,92,255,0.12); outline-offset:2px; }
+
+/* ---------- small helpers ---------- */
+.buttons-row { display:flex; gap:12px; align-items:center; margin:12px 0; }
+.note { color: #cbd6ff; font-size:13px; }
+
+/* ====== SETTING BODY AGAR LOGIN BERADA DITENGAH ======
+   DIHAPUS karena menyebabkan seluruh halaman tidak bisa discroll.
+   Jika ingin layout login center-only, gunakan <body class="login-page"> (sudah tersedia di file).
+*/
+/* ...existing code... */
+
+/* ====== LOGIN PAGE LAYOUT - aktifkan hanya jika <body class="login-page"> ====== */
+body.login-page {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;     /* Tengah horizontal */
+    align-items: center;          /* Tengah vertikal */
+    background: #0b0f19;          /* Warna background */
+    overflow: auto;               /* biarkan halaman bisa discroll bila perlu */
+    position: relative;
+}
+
+/* ====== LOGO DI BELAKANG LOGIN ====== */
+.bg-logo-login {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Tepat di tengah */
+    width: 520px;                      /* Besar agar estetis */
+    opacity: 0.12;                     /* Rendah agar futuristik */
+    z-index: 0;                        /* Di belakang */
+    pointer-events: none;              /* Tidak menghalangi klik */
+    filter: drop-shadow(0 0 25px #00d5ff55);
+}
+
+/* ====== BOX LOGIN ====== */
+.login-container {
+    position: relative;
+    z-index: 2;                         /* Di depan logo */
+    width: 420px;
+    padding: 35px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 35px #00000077;
+    backdrop-filter: blur(10px);
+    text-align: center;
+}
+
+/* Tambahan: CSS untuk membuat tabel bisa discroll dan header tetap */
+.table-container {
+  max-height: 50vh; /* atur tinggi maksimum sesuai kebutuhan */
+  overflow: auto;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 8px;
+  padding: 12px;
+  background: linear-gradient(180deg, #f2f2f5, #e6e6ea); /* abu-abu lembut */
+  color: #222; /* teks gelap agar kontras */
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+/* Pastikan tabel menggunakan warna teks dari container */
+.table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+  color: inherit;
+}
+
+/* Header tetap sticky, disesuaikan ke abu-abu */
+.table-container thead th {
+  position: sticky;
+  top: 0;
+  background: #e9e9ee;
+  color: #111;
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+/* Scrollbar abu-abu (Chromium) */
+.table-container::-webkit-scrollbar {
+  height: 10px;
+  width: 12px;
+}
+.table-container::-webkit-scrollbar-thumb {
+  background: rgba(60,60,60,0.22);
+  border-radius: 8px;
+  border: 2px solid rgba(0,0,0,0.02);
+}
+

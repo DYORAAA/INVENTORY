@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Import loader — write imported_items.json to localStorage</title>
+</head>
+<body>
+  <h2>Import loader</h2>
+  <p>This page will load <code>data/imported_items.json</code> and write it to localStorage keys <code>items</code> and <code>inventarisTKJ</code>.</p>
+  <button id="load">Load into localStorage</button>
+  <pre id="out"></pre>
+
+  <script>
+    document.getElementById('load').addEventListener('click', async () => {
+      try {
+        const res = await fetch('data/imported_items.json');
+        if (!res.ok) throw new Error('Failed to fetch imported_items.json: ' + res.status);
+        const items = await res.json();
+        localStorage.setItem('items', JSON.stringify(items));
+        localStorage.setItem('inventarisTKJ', JSON.stringify(items));
+        document.getElementById('out').innerText = 'Imported ' + items.length + ' items into localStorage keys: items, inventarisTKJ';
+      } catch (err) {
+        document.getElementById('out').innerText = 'Error: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

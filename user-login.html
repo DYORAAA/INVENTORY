@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>User Login - Inventaris</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="login-page">
+  <img src="logo-big.png" alt="logo" class="bg-logo-login" />
+  <div class="login-container">
+    <h2>Login User</h2>
+    <form id="nisnForm">
+      <input type="text" id="nisn-input" placeholder="Masukkan NISN (tanpa password)" required />
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+        <button type="submit">Masuk</button>
+        <a href="index.html" style="align-self:center;color:var(--muted);text-decoration:none">Kembali</a>
+      </div>
+    </form>
+    <p style="margin-top:12px;font-size:13px;color:var(--muted)">Masukkan NISN Anda. User hanya dapat mengajukan permintaan pinjam.</p>
+  </div>
+
+  <script>
+    document.getElementById('nisnForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const nisn = document.getElementById('nisn-input').value.trim();
+      if (!nisn) { alert('Masukkan NISN.'); return; }
+      localStorage.setItem('username', nisn);
+      localStorage.setItem('userRole', 'user');
+      location.href = 'dashboard.html';
+    });
+  </script>
+</body>
+
+</html>

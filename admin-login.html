@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Login - Inventaris</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="login-page">
+  <img src="logo-big.png" alt="logo" class="bg-logo-login" />
+  <div class="login-container">
+    <h2>Login Admin</h2>
+    <form id="adminForm">
+      <input type="text" id="admin-username" placeholder="Username" required />
+      <input type="password" id="admin-password" placeholder="Password" required />
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+        <button type="submit">Login</button>
+        <a href="index.html" style="align-self:center;color:var(--muted);text-decoration:none">Kembali</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('adminForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const u = document.getElementById('admin-username').value.trim();
+      const p = document.getElementById('admin-password').value.trim();
+      if (u === 'admin' && p === 'admin') {
+        localStorage.setItem('username','admin');
+        localStorage.setItem('userRole','admin');
+        location.href = 'dashboard.html';
+      } else {
+        alert('Login admin gagal. Gunakan admin / admin untuk demo.');
+      }
+    });
+  </script>
+</body>
+
+</html>

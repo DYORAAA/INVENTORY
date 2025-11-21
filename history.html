@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Riwayat Peminjaman</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <script>
+    const role = localStorage.getItem('userRole');
+    if (!role) {
+      location.href = 'index.html';
+    } else if (role !== 'admin') {
+      alert('Akses ditolak. Hanya admin yang dapat melihat riwayat.');
+      location.href = 'dashboard.html';
+    }
+  </script>
+
+  <div class="container">
+    <h1>Riwayat Peminjaman</h1>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="window.history.back()">Kembali</button>
+      <button onclick="renderHistory()">Refresh</button>
+      <button onclick="window.clearHistory(); renderHistory();">Hapus Semua</button>
+      <button onclick="window.exportHistoryCSV()">Export CSV</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Waktu</th>
+          <th>Tipe</th>
+          <th>Nama</th>
+          <th>Kode</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody id="history-body"></tbody>
+    </table>
+  </div>
+
+  <script src="history.js"></script>
+</body>
+</html>
