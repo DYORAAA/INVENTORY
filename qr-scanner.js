@@ -21,109 +21,116 @@
         console.log('[cariBarang] decodedText =', decodedText);
         if (!decodedText) return null;
 
-        // Jika QR berisi JSON, coba parse dan ambil field kode/nama
+        // Normalisasi input dari QR
         let kodeToFind = null;
         try {
             const parsed = JSON.parse(decodedText);
             console.log('[cariBarang] parsed QR JSON =', parsed);
             if (parsed && typeof parsed === 'object') {
-                if (parsed.kode) kodeToFind = String(parsed.kode);
-                else if (parsed.code) kodeToFind = String(parsed.code);
-                else if (parsed.id) kodeToFind = String(parsed.id);
-                if (!kodeToFind && (parsed.nama || parsed.name || parsed.title)) {
-                    kodeToFind = String(parsed.nama || parsed.name || parsed.title);
-                }
+                kodeToFind = String(parsed.kode || parsed.code || parsed.id || parsed.nama || parsed.name || parsed.title || '').trim() || null;
             }
         } catch (e) {
-            // not JSON, ignore
+            // bukan JSON
         }
 
         if (!kodeToFind && typeof decodedText === 'string' && decodedText.includes('|')) {
-            const parts = decodedText.split('|').map(p => p.trim());
-            if (parts.length >= 2 && parts[1]) kodeToFind = parts[1];
-            else kodeToFind = parts[0];
+            const parts = decodedText.split('|').map(p => p.trim()).filter(Boolean);
+            if (parts.length >= 2) kodeToFind = parts[1];
+            else if (parts.length === 1) kodeToFind = parts[0];
         }
 
         if (!kodeToFind) kodeToFind = String(decodedText).trim();
 
+        // Siapkan daftar sumber kemungkinan item
         const keysToCheck = ['items', 'inventarisTKJ', 'barang_inventory'];
         const allItems = [];
+        const seenSources = [];
         for (const k of keysToCheck) {
             const s = localStorage.getItem(k);
             if (!s) continue;
+            seenSources.push(k);
             try {
                 const arr = JSON.parse(s);
-                if (Array.isArray(arr)) {
-                    allItems.push(...arr);
-                } else if (arr && typeof arr === 'object') {
-                    allItems.push(...Object.values(arr));
-                }
+                if (Array.isArray(arr)) allItems.push(...arr);
+                else if (arr && typeof arr === 'object') allItems.push(...Object.values(arr));
             } catch (e) {
                 // ignore parse errors
             }
         }
 
-        // jika belum ada data dari keysToCheck, ambil semua localStorage values sebagai fallback
+        // fallback: scan semua localStorage values
         if (allItems.length === 0) {
-            console.log('[cariBarang] no items in common keys, scanning all localStorage values as fallback');
             for (let i = 0; i < localStorage.length; i++) {
-                const k = localStorage.key(i);
+                const key = localStorage.key(i);
                 try {
-                    const v = JSON.parse(localStorage.getItem(k));
+                    const v = JSON.parse(localStorage.getItem(key));
                     if (Array.isArray(v)) allItems.push(...v);
                     else if (v && typeof v === 'object') allItems.push(...Object.values(v));
                 } catch (e) {
-                    // ignore
+                    // ignore non-json values
                 }
             }
         }
 
-        console.log('[cariBarang] allItems count =', allItems.length, allItems.slice(0,5));
+        console.log('[cariBarang] sources', seenSources.length ? seenSources : 'all keys', 'allItems count =', allItems.length, allItems.slice(0,3));
 
-        // dedupe by id or kode
+        // dedupe
         const seen = new Set();
         const uniq = [];
         for (const it of allItems) {
             if (!it || typeof it !== 'object') continue;
-            const id = it.id || it.kode || it.code || JSON.stringify(it);
-            if (!id) continue;
+            const id = (it.id || it.kode || it.code || JSON.stringify(it)).toString();
             if (seen.has(id)) continue;
             seen.add(id);
             uniq.push(it);
         }
 
-        const needle = String(kodeToFind).trim().toLowerCase().replace(/[^a-z0-9]/gi,'');
+        // normalisasi needle (jaga versi tanpa strip untuk substring match)
+        const needleRaw = String(kodeToFind || '').trim();
+        const needleNorm = needleRaw.toLowerCase().replace(/[^a-z0-9]/gi, '');
+        console.log('[cariBarang] needleRaw =', needleRaw, 'needleNorm =', needleNorm);
 
-        const getCandidates = (obj, keys) => keys.map(k => (obj && obj[k]) ? String(obj[k]).trim().toLowerCase() : null).filter(Boolean);
+        const pickStrings = obj => {
+            const out = [];
+            for (const k in obj) {
+                try {
+                    const v = obj[k];
+                    if (v == null) continue;
+                    if (typeof v === 'string' && v.trim()) out.push(v.trim());
+                    else if (typeof v === 'number') out.push(String(v));
+                } catch (e) {}
+            }
+            return out;
+        };
 
-        let found = null;
+        // 1) exact match on common code fields
+        let found = uniq.find(it => {
+            const vals = pickStrings(it);
+            return vals.some(v => {
+                const vn = v.toLowerCase().replace(/[^a-z0-9]/gi,'');
 
-        found = uniq.find(it => {
-            const codes = getCandidates(it, ['kode','code','id','kd','serial']);
-            return codes.some(c => c.replace(/[^a-z0-9]/gi,'') === needle);
+                return vn === needleNorm || v.toLowerCase() === needleRaw.toLowerCase();
+            });
         });
 
+        // 2) contains match on code/name (normalized and raw)
         if (!found) {
             found = uniq.find(it => {
-                const codes = getCandidates(it, ['kode','code','id','kd','serial']);
-                return codes.some(c => c.replace(/[^a-z0-9]/gi,'').includes(needle));
+                const vals = pickStrings(it);
+                return vals.some(v => {
+                    const vn = v.toLowerCase().replace(/[^a-z0-9]/gi,'');
+
+                    return (needleNorm && vn.includes(needleNorm)) || (v.toLowerCase().includes(needleRaw.toLowerCase()));
+                });
             });
         }
 
-        if (!found) {
-            found = uniq.find(it => {
-                const names = getCandidates(it, ['nama','name','title','nama_barang']);
-                return names.some(n => n.replace(/[^a-z0-9]/gi,'').includes(needle));
-            });
-        }
-
-        // fallback agresif: cek semua properti (stringify) apakah mengandung needle
-        if (!found) {
+        // 3) aggressive fallback: stringify full object and search
+        if (!found && needleNorm.length > 0) {
             for (const it of uniq) {
                 try {
-                    const text = JSON.stringify(it).toLowerCase().replace(/[^a-z0-9]/gi,'');
-
-                    if (needle.length > 0 && text.includes(needle)) {
+                    const text = JSON.stringify(it).toLowerCase();
+                    if (text.indexOf(needleRaw.toLowerCase()) !== -1 || text.replace(/[^a-z0-9]/gi,'').indexOf(needleNorm) !== -1) {
                         found = it;
                         break;
                     }
