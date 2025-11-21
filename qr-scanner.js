@@ -18,127 +18,61 @@
     // 'items', 'inventarisTKJ', dan 'barang_inventory'.
     // Menangani beberapa format decodedText: JSON, "nama|kode", atau plain text.
     function cariBarang(decodedText) {
-        console.log('[cariBarang] decodedText =', decodedText);
         if (!decodedText) return null;
 
-        // Normalisasi input dari QR
+        // Jika QR berisi JSON, coba parse dan ambil field kode/nama
         let kodeToFind = null;
         try {
             const parsed = JSON.parse(decodedText);
-            console.log('[cariBarang] parsed QR JSON =', parsed);
             if (parsed && typeof parsed === 'object') {
-                kodeToFind = String(parsed.kode || parsed.code || parsed.id || parsed.nama || parsed.name || parsed.title || '').trim() || null;
+                if (parsed.kode) kodeToFind = String(parsed.kode);
+                else if (parsed.code) kodeToFind = String(parsed.code);
             }
         } catch (e) {
-            // bukan JSON
+            // not JSON, ignore
         }
 
+        // Jika format "nama|kode"
         if (!kodeToFind && typeof decodedText === 'string' && decodedText.includes('|')) {
-            const parts = decodedText.split('|').map(p => p.trim()).filter(Boolean);
-            if (parts.length >= 2) kodeToFind = parts[1];
-            else if (parts.length === 1) kodeToFind = parts[0];
+            const parts = decodedText.split('|').map(p => p.trim());
+            // prefer second part as kode if present
+            if (parts.length >= 2 && parts[1]) kodeToFind = parts[1];
+            else kodeToFind = parts[0];
         }
 
+        // fallback: treat the whole decodedText as kode or name
         if (!kodeToFind) kodeToFind = String(decodedText).trim();
 
-        // Siapkan daftar sumber kemungkinan item
         const keysToCheck = ['items', 'inventarisTKJ', 'barang_inventory'];
         const allItems = [];
-        const seenSources = [];
         for (const k of keysToCheck) {
             const s = localStorage.getItem(k);
             if (!s) continue;
-            seenSources.push(k);
             try {
                 const arr = JSON.parse(s);
                 if (Array.isArray(arr)) allItems.push(...arr);
-                else if (arr && typeof arr === 'object') allItems.push(...Object.values(arr));
             } catch (e) {
                 // ignore parse errors
             }
         }
 
-        // fallback: scan semua localStorage values
-        if (allItems.length === 0) {
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                try {
-                    const v = JSON.parse(localStorage.getItem(key));
-                    if (Array.isArray(v)) allItems.push(...v);
-                    else if (v && typeof v === 'object') allItems.push(...Object.values(v));
-                } catch (e) {
-                    // ignore non-json values
-                }
-            }
-        }
-
-        console.log('[cariBarang] sources', seenSources.length ? seenSources : 'all keys', 'allItems count =', allItems.length, allItems.slice(0,3));
-
-        // dedupe
+        // dedupe by id or kode
         const seen = new Set();
         const uniq = [];
         for (const it of allItems) {
-            if (!it || typeof it !== 'object') continue;
-            const id = (it.id || it.kode || it.code || JSON.stringify(it)).toString();
+            const id = it && (it.id || it.kode || JSON.stringify(it));
+            if (!id) continue;
             if (seen.has(id)) continue;
             seen.add(id);
             uniq.push(it);
         }
 
-        // normalisasi needle (jaga versi tanpa strip untuk substring match)
-        const needleRaw = String(kodeToFind || '').trim();
-        const needleNorm = needleRaw.toLowerCase().replace(/[^a-z0-9]/gi, '');
-        console.log('[cariBarang] needleRaw =', needleRaw, 'needleNorm =', needleNorm);
+        const needle = String(kodeToFind).trim().toLowerCase();
+        // search by kode exact, then kode contains, then name contains
+        let found = uniq.find(it => it && it.kode && String(it.kode).trim().toLowerCase() === needle);
+        if (!found) found = uniq.find(it => it && it.kode && String(it.kode).trim().toLowerCase().includes(needle));
+        if (!found) found = uniq.find(it => it && it.nama && String(it.nama).trim().toLowerCase().includes(needle));
 
-        const pickStrings = obj => {
-            const out = [];
-            for (const k in obj) {
-                try {
-                    const v = obj[k];
-                    if (v == null) continue;
-                    if (typeof v === 'string' && v.trim()) out.push(v.trim());
-                    else if (typeof v === 'number') out.push(String(v));
-                } catch (e) {}
-            }
-            return out;
-        };
-
-        // 1) exact match on common code fields
-        let found = uniq.find(it => {
-            const vals = pickStrings(it);
-            return vals.some(v => {
-                const vn = v.toLowerCase().replace(/[^a-z0-9]/gi,'');
-
-                return vn === needleNorm || v.toLowerCase() === needleRaw.toLowerCase();
-            });
-        });
-
-        // 2) contains match on code/name (normalized and raw)
-        if (!found) {
-            found = uniq.find(it => {
-                const vals = pickStrings(it);
-                return vals.some(v => {
-                    const vn = v.toLowerCase().replace(/[^a-z0-9]/gi,'');
-
-                    return (needleNorm && vn.includes(needleNorm)) || (v.toLowerCase().includes(needleRaw.toLowerCase()));
-                });
-            });
-        }
-
-        // 3) aggressive fallback: stringify full object and search
-        if (!found && needleNorm.length > 0) {
-            for (const it of uniq) {
-                try {
-                    const text = JSON.stringify(it).toLowerCase();
-                    if (text.indexOf(needleRaw.toLowerCase()) !== -1 || text.replace(/[^a-z0-9]/gi,'').indexOf(needleNorm) !== -1) {
-                        found = it;
-                        break;
-                    }
-                } catch (e) {}
-            }
-        }
-
-        console.log('[cariBarang] found =', found);
         return found || null;
     }
 
@@ -223,10 +157,9 @@
                 const item = cariBarang(decodedText);
                 
                 if (item) {
-                    // fallback untuk beberapa nama properti
-                    document.getElementById('hasil_nama').innerText = item.nama || item.name || item.title || '-';
-                    document.getElementById('hasil_status').innerText = item.status || item.keadaan || item.condition || '-';
-                    document.getElementById('hasil_jumlah').innerText = item.jumlah || item.qty || item.stok || item.stock || '-';
+                    document.getElementById('hasil_nama').innerText = item.nama || '-';
+                    document.getElementById('hasil_status').innerText = item.status || '-';
+                    document.getElementById('hasil_jumlah').innerText = item.jumlah || '-';
                 } else {
                     document.getElementById('hasil_nama').innerText = 'Tidak Ditemukan';
                     document.getElementById('hasil_status').innerText = '-';
